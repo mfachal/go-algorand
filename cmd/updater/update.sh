@@ -18,6 +18,7 @@ HOSTEDSPEC=""
 BUCKET=""
 GENESIS_NETWORK_DIR=""
 GENESIS_NETWORK_DIR_SPEC=""
+SERVICE="algorand"
 
 set -o pipefail
 
@@ -84,6 +85,10 @@ while [ "$1" != "" ]; do
             shift
             BUCKET="-b $1"
             ;;
+	-service)
+	    shift
+	    SERVICE=$1
+	    ;;
         *)
             echo "Unknown option" "$1"
             UNKNOWNARGS+=("$1")
@@ -220,7 +225,7 @@ function shutdown_node() {
             for DD in ${DATADIRS[@]}; do
                 if [ -f ${DD}/algod.pid ] || [ -f ${DD}/**/kmd.pid ] ; then
                     echo Stopping node and waiting...
-                    sudo -n systemctl stop algorand@$(systemd-escape ${DD})
+                    sudo -n systemctl stop ${SERVICE}@$(systemd-escape ${DD})
                     ${BINDIR}/goal node stop -d ${DD}
                     sleep 5
                 else
@@ -395,7 +400,7 @@ function startup_node() {
         fail_and_exit "Installation does not appear to be valid"
     fi
 
-    sudo -n systemctl start algorand@$(systemd-escape ${CURDATADIR})
+    sudo -n systemctl start ${SERVICE}@$(systemd-escape ${CURDATADIR})
     if [ $? -ne 0 ]; then
         ${BINDIR}/goal node start -d ${CURDATADIR} ${HOSTEDFLAG}
     fi
