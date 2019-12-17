@@ -28,6 +28,7 @@ import (
 	"runtime"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/mattn/go-sqlite3"
 
 	"github.com/algorand/go-algorand/logging"
@@ -82,6 +83,24 @@ func MakeErasableAccessor(dbfilename string) (Accessor, error) {
 
 	if err == nil {
 		err = db.runInitStatements()
+	}
+
+	return db, err
+}
+
+func MakePostgresAccessor(host, user, password, dbname string, port int) (Accessor, error) {
+	var db Accessor
+	db.readOnly = false
+
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+
+	var err error
+	db.Handle, err = sql.Open("postgres", psqlInfo)
+
+	if err == nil {
+		err = db.Handle.Ping()
 	}
 
 	return db, err

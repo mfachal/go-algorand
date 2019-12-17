@@ -25,6 +25,12 @@ import (
 )
 
 const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = ""
+	dbname   = "postgres"
+
 	dbName  = "indexer.sqlite"
 	maxRows = 100
 )
@@ -44,7 +50,7 @@ var schema = `
 		UNIQUE (k)
 	);
 
-	INSERT OR IGNORE INTO params (k, v) VALUES ('maxRound', 1);
+	INSERT INTO params (k, v) VALUES ('maxRound', 1) ON CONFLICT (k) DO NOTHING ;
 
 	CREATE INDEX IF NOT EXISTS idx ON transactions (
 		created_at	DESC,
@@ -78,13 +84,13 @@ func MakeIndexerDB(dbPath string, inMemory bool) (*DB, error) {
 
 	idb.DBPath = dbPath + "/" + dbName
 
-	dbr, err := db.MakeAccessor(idb.DBPath, true, inMemory)
+	dbr, err := db.MakePostgresAccessor(host, user, password, dbname, port) //Accessor(idb.DBPath, true, inMemory)
 	if err != nil {
 		return &DB{}, err
 	}
 	idb.dbr = dbr
 
-	dbw, err := db.MakeAccessor(idb.DBPath, false, inMemory)
+	dbw, err := db.MakePostgresAccessor(host, user, password, dbname, port) //db.MakeAccessor(idb.DBPath, false, inMemory)
 	if err != nil {
 		return &DB{}, err
 	}
@@ -173,15 +179,15 @@ func (idb *DB) GetTransactionByID(txid string) (Transaction, error) {
 // GetTransactionsRoundsByAddr takes an address and returns all its transaction rounds records
 // if top is 0, it will return 25 transactions by default
 func (idb *DB) GetTransactionsRoundsByAddr(addr string, top uint64) ([]uint64, error) {
-	query := `
+	query := `SELECT round FROM (
 		SELECT DISTINCT
-			round
+			round, created_at
 		FROM
 			transactions
 		WHERE
 		from_addr = $1 OR to_addr = $1 
 		ORDER BY created_at DESC
-		LIMIT $2;
+		LIMIT $2) AS SAMPLE;;
 	`
 
 	// limit
